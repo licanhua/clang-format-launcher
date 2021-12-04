@@ -7,6 +7,10 @@
     "target": "es5",
     "allowJs": true,
     "moduleResolution": "node",
-    "esModuleInterop": true
-  }
+    "esModuleInterop": true,
+    "rootDir": "./src",
+  },
+  "include": [
+    "./src/**/*.ts"
+  ]
 }

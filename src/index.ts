@@ -51,7 +51,7 @@ function main() {
     loadConfig();
 
     if (verify) {
-      args = ["-Werror", "--dry-run", ...args];
+      args = ["-Werror", "--dry-run", "--verbose", ...args];
     } else {
       args = ["-Werror", "-i", ...args];
     }
@@ -60,17 +60,35 @@ function main() {
     }
   }
 
+  let errors: any[] = [];
+
+  const handleError = (error?: any) => {
+    if (error) {
+      errors.push(error);
+    }
+  }
+
   // Run clang-format.
   try {
     // Pass all arguments to clang-format, including e.g. -version etc.
     if (raw) {
-      spawnClangFormat(args, process.exit, 'inherit');
+      spawnClangFormat(args, handleError, 'inherit');
     } else {
-      spawnClangFormat(args, verify ? queryNoOpenFiles : process.exit, 'inherit');
+      spawnClangFormat(args, handleError, 'inherit');
     }
   } catch (e) {
     process.stdout.write((e as Error).message);
     process.exit(1);
+  }
+
+  if (errors.length > 0) {
+    errors.forEach((error) => {
+      console.log((error as Error).message);
+    })
+    process.exit(1);
+  }
+  if (!raw && verify) {
+    queryNoOpenFiles();
   }
 }
 
@@ -226,7 +244,7 @@ function spawnClangFormat(
           }
         });
       };
-    }),
+    }, (err: Error) => { if (err) { done(err) } }),
     (err) => {
       if (err) {
         done(err);
@@ -290,7 +308,7 @@ Usage:
     equal to 'npx clang-format --style=file -Werror -i [other options] [Files after filter]'
 
   npx clang-format-launcher -verify [other options]
-    equal to 'npx clang-format --style=file -Werror "--dry-run" [other options] [Files after filter]'
+    equal to 'npx clang-format --style=file -Werror --dry-run --verbose [other options] [Files after filter]'
 
   npx clang-format-launcher -raw [other options]
     equal to 'npx clang-format  [other options]

@@ -19,6 +19,7 @@ import {
 
 // @ts-ignore (no typings for clang-format)
 import { getNativeBinary } from 'clang-format';
+import { verify } from 'crypto';
 
 /// These variables control which files are formatted
 let includeEndsWith = ['.h', '.cpp'];
@@ -35,19 +36,22 @@ const CONFIG_FILE = 'clang.format.json'
 const VERBOSE_FLAG = '--verbose';
 const RAW_FLAG = '-raw';
 const HELP_FLAG = '--help';
+const VERSION_FLAG = '--version';
 
 function main() {
-  const verify = process.argv.indexOf(VERIFY_FLAG) > 0;
-  verbose = process.argv.indexOf(VERBOSE_FLAG) > 0;
-  const raw = process.argv.indexOf(RAW_FLAG) > 0;
-  const help = process.argv.indexOf(HELP_FLAG) > 0;
+  const verify = process.argv.indexOf(VERIFY_FLAG) !== -1;
+  verbose = process.argv.indexOf(VERBOSE_FLAG) !== -1;
+  let useRaw = process.argv.indexOf(RAW_FLAG) !== -1;
+  useRaw = useRaw || process.argv.indexOf(VERSION_FLAG) !== -1;
+  const help = process.argv.indexOf(HELP_FLAG) !== -1;
+  useRaw = useRaw || help
   if (help) {
     printHelp();
   }
 
   let args = process.argv.slice(2).filter((_) => _ !== VERIFY_FLAG && _ !== RAW_FLAG);
 
-  if (!raw) {
+  if (!useRaw) {
     loadConfig();
 
     if (verify) {
@@ -60,35 +64,27 @@ function main() {
     }
   }
 
-  let errors: any[] = [];
-
-  const handleError = (error?: any) => {
+  const handleDone = (checkGitStatus: boolean) => (error?: Error) => {
     if (error) {
-      errors.push(error);
+      process.stdout.write(error.message);
+      process.exit(3);
+    }
+    if (checkGitStatus) {
+      queryNoOpenFiles();
     }
   }
 
   // Run clang-format.
   try {
     // Pass all arguments to clang-format, including e.g. -version etc.
-    if (raw) {
-      spawnClangFormat(args, handleError, 'inherit');
+    if (useRaw) {
+      spawnClangFormatRaw(args, handleDone(false), 'inherit');
     } else {
-      spawnClangFormat(args, handleError, 'inherit');
+      spawnClangFormat(args, handleDone(verify), 'inherit');
     }
   } catch (e) {
     process.stdout.write((e as Error).message);
     process.exit(1);
-  }
-
-  if (errors.length > 0) {
-    errors.forEach((error) => {
-      console.log((error as Error).message);
-    })
-    process.exit(1);
-  }
-  if (!raw && verify) {
-    queryNoOpenFiles();
   }
 }
 
@@ -192,7 +188,7 @@ function listAllTrackedFiles(cwd: string) {
  */
 function spawnClangFormat(
   args: string[],
-  done: (any?: any) => void,
+  done: (Error?: any) => void,
   stdio: StdioOptions,
 ) {
   // WARNING: This function's interface should stay stable across versions for the cross-version
@@ -213,7 +209,7 @@ function spawnClangFormat(
   files = files.filter(
     (file) =>
       includeEndsWith.some((_) => file.endsWith(_)) &&
-      !excludePathContains.some((_) => file.indexOf(_) > 0) &&
+      !excludePathContains.some((_) => file.indexOf(_) >= 0) &&
       !excludePathEndsWith.some((_) => file.endsWith(_)) &&
       !excludePathStartsWith.some((_) => file.startsWith(_)) ,
   );
@@ -244,7 +240,7 @@ function spawnClangFormat(
           }
         });
       };
-    }, (err: Error) => { if (err) { done(err) } }),
+    }),
     (err) => {
       if (err) {
         done(err);
@@ -265,7 +261,7 @@ function spawnClangFormat(
  */
 function spawnClangFormatRaw(
   args: string[],
-  done: (any?: any) => void,
+  done: (any?: Error) => void,
   stdio: StdioOptions,
 ) {
   // WARNING: This function's interface should stay stable across versions for the cross-version
@@ -287,7 +283,9 @@ function spawnClangFormatRaw(
   });
   clangFormatProcess.on('close', (exit) => {
     if (exit !== 0) {
-      errorFromExitCode(exit!);
+      done(errorFromExitCode(exit!));
+    } else {
+      done();
     }
   }
   );

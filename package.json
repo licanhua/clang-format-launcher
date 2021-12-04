@@ -1,0 +1,24 @@
+{
+  "name": "clang-format-launcher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "peerDependencies": {
+    "clang-format": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/async": "^3.2.2",
+    "@types/node": "^16.11.11",
+    "async": "^3.2.2",
+    "clang-format": "1.5.0",
+    "typescript": "^4.5.2"
+  },
+  "dependencies": {
+  }
+}

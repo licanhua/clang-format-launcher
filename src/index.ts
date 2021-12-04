@@ -24,14 +24,20 @@ import { getNativeBinary } from 'clang-format';
 let includeEndsWith = ['.h', '.cpp'];
 let excludePathContains: string[] = [];
 let excludePathEndsWith = ['.g.h', '.g.cpp'];
-let folder = path.resolve(__dirname, '../..');
+let excludePathStartsWith: string[] = [];
+let folder = path.resolve(__dirname, '../../../');
+let verbose = false;
 
 const VERIFY_FLAG = '-verify';
 const CONFIG_FILE = 'clang.format.json'
+const VERBOSE_FLAG = '-verbose';
 
 function main() {
   const verify = process.argv.indexOf(VERIFY_FLAG) > 0;
-  const args = process.argv.slice(2).filter((_) => _ !== VERIFY_FLAG);
+  verbose = process.argv.indexOf(VERBOSE_FLAG) > 0;
+
+  const args = process.argv.slice(2).filter((_) => _ !== VERIFY_FLAG && _ !== VERBOSE_FLAG);
+
 
   loadConfig();
   // Run clang-format.
@@ -48,24 +54,31 @@ interface Config {
   includeEndsWith?: string[],
   excludePathContains?: string[],
   excludePathEndsWith?: string[],
+  excludePathStartsWith?: string[],
   folder?: string,
 };
 
+function verboseLog(s: string) {
+  if (verbose) {
+    console.log(s);
+  }
+}
 function loadConfig() {
-  const conf = path.resolve(__dirname, '../../' + CONFIG_FILE);
-  console.log("Looking for conf: " + conf);
+  const conf = path.resolve(__dirname, '../../../' + CONFIG_FILE);
+  verboseLog("Looking for conf: " + conf);
 
   if (fs.existsSync(conf)) {
-    console.log("Using conf file: " + conf);
+    verboseLog("Using conf file: " + conf);
     try {
       const jsonString = fs.readFileSync(conf, { encoding: 'utf8', flag: 'r' });
       let config: Config = JSON.parse(jsonString);
       includeEndsWith = config.includeEndsWith ?? includeEndsWith;
       excludePathContains = config.excludePathContains ?? excludePathContains;
       excludePathEndsWith = config.excludePathEndsWith ?? excludePathEndsWith;
+      excludePathStartsWith = config.excludePathStartsWith ?? excludePathStartsWith;
       folder = config.folder ?? folder;
       if (!path.isAbsolute(folder)) {
-        folder = path.resolve(__dirname, '../..', folder);
+        folder = path.resolve(__dirname, '../../..', folder);
       }
     }
     catch (e) {
@@ -75,13 +88,14 @@ function loadConfig() {
     }
   }
   else {
-    console.log("No config file is detected, use default setting");
+    verboseLog("No config file is detected, use default setting");
   }
 
-  console.log('  "includeEndsWith": ' + JSON.stringify(includeEndsWith));
-  console.log('  "excludePathContains": ' + JSON.stringify(excludePathContains));
-  console.log('  "excludePathEndsWith": ' + JSON.stringify(excludePathEndsWith));
-  console.log('  "folder": ' + folder);
+  verboseLog('  "includeEndsWith": ' + JSON.stringify(includeEndsWith));
+  verboseLog('  "excludePathContains": ' + JSON.stringify(excludePathContains));
+  verboseLog('  "excludePathEndsWith": ' + JSON.stringify(excludePathEndsWith));
+  verboseLog('  "excludePathStartsWith": ' + JSON.stringify(excludePathStartsWith));
+  verboseLog('  "folder": ' + folder);
 }
 
 function queryNoOpenFiles() {
@@ -99,6 +113,7 @@ function errorFromExitCode(exitCode: number) {
 }
 
 function git(args: string[], options: SpawnSyncOptions) {
+  verboseLog("git: " + JSON.stringify(args) + "  " + JSON.stringify(options))
   const results = spawnSync('git', args, options);
 
   if (results.status === 0) {
@@ -142,6 +157,7 @@ function spawnClangFormat(
 
   try {
     nativeBinary = getNativeBinary();
+    verboseLog("native Clang-format: " + nativeBinary);
   } catch (e) {
     setImmediate(done.bind(e));
     return;
@@ -154,7 +170,8 @@ function spawnClangFormat(
     (file) =>
       includeEndsWith.some((_) => file.endsWith(_)) &&
       !excludePathContains.some((_) => file.indexOf(_) > 0) &&
-      !excludePathEndsWith.some((_) => file.endsWith(_)),
+      !excludePathEndsWith.some((_) => file.endsWith(_)) && 
+      !excludePathStartsWith.some((_) => file.startsWith(_)) ,
   );
 
   // split file array into chunks of 30
@@ -171,7 +188,9 @@ function spawnClangFormat(
   async.series<number, Error>(
     chunks.map((chunk) => {
       return function (callback) {
+        verboseLog("clang-format " + JSON.stringify(chunk));
         const clangFormatProcess = spawn(nativeBinary, args.concat(chunk), {
+          cwd: folder,
           stdio: stdio,
         });
         clangFormatProcess.on('close', (exit) => {

@@ -101,7 +101,7 @@ function loadConfig() {
 function queryNoOpenFiles() {
   const opened = execSync('git status -s').toString();
   if (opened) {
-    console.error('The following files have incorrect formatting:');
+    console.error('The following files have incorrect formatting or not committed:');
     console.error(opened);
     console.error('Running `format` from the repo root should fix this.');
     process.exit(2);

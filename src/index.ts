@@ -55,7 +55,7 @@ function main() {
     loadConfig();
 
     if (verify) {
-      args = ["-Werror", "--dry-run", "--verbose", ...args];
+      args = ["-Werror", "--dry-run", ...args];
     } else {
       args = ["-Werror", "-i", ...args];
     }
@@ -294,7 +294,7 @@ function spawnClangFormatRaw(
 function printHelp() {
   console.log(
     `
-clang-format-launcher is an clang-format wrapper.
+clang-format-launcher is a clang-format wrapper.
 It uses 'git ls-tree' to speed up the file lookup, then filters the files by the rule which is defined in clang.format.json.
 Usage:
   npx clang-format-launcher [options] [other options]
@@ -306,7 +306,7 @@ Usage:
     equal to 'npx clang-format --style=file -Werror -i [other options] [Files after filter]'
 
   npx clang-format-launcher -verify [other options]
-    equal to 'npx clang-format --style=file -Werror --dry-run --verbose [other options] [Files after filter]'
+    equal to 'npx clang-format --style=file -Werror --dry-run [other options] [Files after filter]'
 
   npx clang-format-launcher -raw [other options]
     equal to 'npx clang-format  [other options]

@@ -311,6 +311,10 @@ Usage:
   npx clang-format-launcher -raw [other options]
     equal to 'npx clang-format  [other options]
 
+  npx clang-format-launcher --verbose
+  
+  npx clang-format-launcher --help
+
 clang.format.json example:
 {
   "includeEndsWith": [".h",".cpp"],

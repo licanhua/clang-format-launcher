@@ -1,6 +1,6 @@
 {
   "name": "clang-format-launcher",
-  "version": "0.1.0",
+  "version": "0.1.1",
 	"description": "clang-format launcher with simple configuration",
 	"author": "Canhua Li",
 	"license": "MIT",

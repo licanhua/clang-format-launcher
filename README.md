@@ -13,7 +13,7 @@ Here is the idea:
 2. Apply `includeEndsWith`, `excludePathContains`, `excludePathEndsWith`, `excludePathStartsWith` to filter the files.
 3. Do clang-format check or format based on the existence of `-verify` flag.
 
-# How to user it
+# How to use it
 
 ## Step 1
 ```
@@ -42,16 +42,19 @@ Here is an example of clang.format.json:
  `npm run format` and `npm run verify`
 	"scripts": {
         ...
-    	"format": "clang-format-launcher",
-		"verify": "clang-format-launcher -verify"
+    "format": "clang-format-launcher --verbose",
+		"verify": "clang-format-launcher -verify --vebose"
 	},
 
+
+  `npm run format --verbose`
 
 ## Run with npx
 `npx clang-format-launcher` 
 
 `npx clang-format-launcher -verify`
 
+`npx clang-format-launcher --verbose`
 
 ## Command details
 ```  
@@ -69,4 +72,8 @@ Here is an example of clang.format.json:
 
   npx clang-format-launcher -raw [other options]
     equal to 'npx clang-format  [other options]
+
+  npx clang-format-launcher --verbose
+  
+  npx clang-format-launcher --help
 ```

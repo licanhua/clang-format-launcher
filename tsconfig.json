@@ -8,9 +8,7 @@
     "allowJs": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "rootDir": "./src",
+    "rootDir": "./src"
   },
-  "include": [
-    "./src/**/*.ts"
-  ]
+  "include": ["./src/**/*.ts"]
 }

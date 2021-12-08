@@ -1,13 +1,10 @@
 /**
- * Copyright (c) Microsoft Corporation.
  * Licensed under the MIT License.
- *
- * @format
  */
 
-import async from 'async';
-import path from 'path';
-import fs from 'fs';
+import async from "async";
+import path from "path";
+import fs from "fs";
 
 import {
   SpawnSyncOptions,
@@ -15,28 +12,65 @@ import {
   execSync,
   spawn,
   spawnSync,
-} from 'child_process';
+} from "child_process";
 
 // @ts-ignore (no typings for clang-format)
-import { getNativeBinary } from 'clang-format';
-import { verify } from 'crypto';
+import { getNativeBinary } from "clang-format";
 
-/// These variables control which files are formatted
-let includeEndsWith = ['.h', '.cpp'];
-let excludePathContains: string[] = [];
-let excludePathEndsWith = ['.g.h', '.g.cpp'];
-let excludePathStartsWith: string[] = [];
-let folder = path.resolve(__dirname, '../../../');
-let style = "--style=file";
+const config: Config = {
+  includeEndsWith: [],
+  excludePathContains: [],
+  excludePathEndsWith: [],
+  excludePathStartsWith: [],
+  gitRoot: process.cwd(),
+  style: "--style=file",
+};
 
 let verbose = false;
 
-const VERIFY_FLAG = '-verify';
-const CONFIG_FILE = 'clang.format.json'
-const VERBOSE_FLAG = '--verbose';
-const RAW_FLAG = '-raw';
-const HELP_FLAG = '--help';
-const VERSION_FLAG = '--version';
+const VERIFY_FLAG = "-verify";
+const RAW_FLAG = "-raw";
+const CONFIG_FILE = "clang.format.json";
+const VERBOSE_FLAG = "--verbose";
+const HELP_FLAG = "--help";
+const VERSION_FLAG = "--version";
+const LAUNCHER = "clang-format-launcher";
+
+interface Config {
+  includeEndsWith?: string[];
+  excludePathContains?: string[];
+  excludePathEndsWith?: string[];
+  excludePathStartsWith?: string[];
+  gitRoot?: string;
+  style?: string;
+}
+
+const hasPackageJsonLauncherKey = (packagePath: string) => {
+  const content = fs.readFileSync(packagePath, "utf8");
+  try {
+    return LAUNCHER in JSON.parse(content);
+  } catch {
+    // If package is not a valid JSON
+    return false;
+  }
+};
+
+const resolveConfigPath = (cwd: string) => {
+  const candidates = [
+    path.resolve(cwd, "package.json"),
+    path.resolve(cwd, CONFIG_FILE),
+    path.resolve(__dirname, "../", CONFIG_FILE),
+  ];
+  return candidates.filter((name) => {
+    if (fs.existsSync(name)) {
+      if (path.basename(name) === "package.json") {
+        return hasPackageJsonLauncherKey(name);
+      }
+      return true;
+    }
+    return false;
+  })[0];
+};
 
 function main() {
   const verify = process.argv.indexOf(VERIFY_FLAG) !== -1;
@@ -44,12 +78,14 @@ function main() {
   let useRaw = process.argv.indexOf(RAW_FLAG) !== -1;
   useRaw = useRaw || process.argv.indexOf(VERSION_FLAG) !== -1;
   const help = process.argv.indexOf(HELP_FLAG) !== -1;
-  useRaw = useRaw || help
+  useRaw = useRaw || help;
   if (help) {
     printHelp();
   }
 
-  let args = process.argv.slice(2).filter((_) => _ !== VERIFY_FLAG && _ !== RAW_FLAG);
+  let args = process.argv
+    .slice(2)
+    .filter((_) => _ !== VERIFY_FLAG && _ !== RAW_FLAG);
 
   if (!useRaw) {
     loadConfig();
@@ -59,8 +95,8 @@ function main() {
     } else {
       args = ["-Werror", "-i", ...args];
     }
-    if (style) {
-      args = [style, ...args];
+    if (config.style) {
+      args = [config.style, ...args];
     }
   }
 
@@ -72,15 +108,15 @@ function main() {
     if (checkGitStatus) {
       queryNoOpenFiles();
     }
-  }
+  };
 
   // Run clang-format.
   try {
     // Pass all arguments to clang-format, including e.g. -version etc.
     if (useRaw) {
-      spawnClangFormatRaw(args, handleDone(false), 'inherit');
+      spawnClangFormatRaw(args, handleDone(false), "inherit");
     } else {
-      spawnClangFormat(args, handleDone(verify), 'inherit');
+      spawnClangFormat(args, handleDone(verify), "inherit");
     }
   } catch (e) {
     process.stdout.write((e as Error).message);
@@ -88,61 +124,51 @@ function main() {
   }
 }
 
-interface Config {
-  includeEndsWith?: string[],
-  excludePathContains?: string[],
-  excludePathEndsWith?: string[],
-  excludePathStartsWith?: string[],
-  folder?: string,
-  style?: string,
-};
-
 function verboseLog(s: string) {
   if (verbose) {
     console.log(s);
   }
 }
 function loadConfig() {
-  const conf = path.resolve(__dirname, '../../../' + CONFIG_FILE);
-  verboseLog("Looking for conf: " + conf);
+  const cwd = process.cwd();
+  const resolvedPath: string = resolveConfigPath(cwd);
+  verboseLog("Using conf file: " + resolvedPath);
+  try {
+    const jsonString = fs.readFileSync(resolvedPath, {
+      encoding: "utf8",
+      flag: "r",
+    });
+    const json = JSON.parse(jsonString);
+    let conf: Config = LAUNCHER in json ? json[LAUNCHER] : json;
 
-  if (fs.existsSync(conf)) {
-    verboseLog("Using conf file: " + conf);
-    try {
-      const jsonString = fs.readFileSync(conf, { encoding: 'utf8', flag: 'r' });
-      let config: Config = JSON.parse(jsonString);
-      includeEndsWith = config.includeEndsWith ?? includeEndsWith;
-      excludePathContains = config.excludePathContains ?? excludePathContains;
-      excludePathEndsWith = config.excludePathEndsWith ?? excludePathEndsWith;
-      excludePathStartsWith = config.excludePathStartsWith ?? excludePathStartsWith;
-      folder = config.folder ?? folder;
-      style = config.style ?? style;
-      if (!path.isAbsolute(folder)) {
-        folder = path.resolve(__dirname, '../../..', folder);
-      }
+    config.includeEndsWith = conf.includeEndsWith ?? config.includeEndsWith;
+    config.excludePathContains =
+      conf.excludePathContains ?? config.excludePathContains;
+    config.excludePathEndsWith =
+      conf.excludePathEndsWith ?? config.excludePathEndsWith;
+    config.excludePathStartsWith =
+      conf.excludePathStartsWith ?? config.excludePathStartsWith;
+    config.gitRoot = conf.gitRoot ?? config.gitRoot;
+    config.style = conf.style ?? config.style;
+    if (!path.isAbsolute(config.gitRoot)) {
+      config.gitRoot = path.resolve(cwd, config.gitRoot);
     }
-    catch (e) {
-      console.log("Fail to parse conf file");
-      console.log((e as Error).message);
-      process.exit(1);
-    }
-  }
-  else {
-    verboseLog("No config file is detected, use default setting");
+  } catch (e) {
+    console.log("Fail to parse conf file");
+    console.log((e as Error).message);
+    process.exit(1);
   }
 
-  verboseLog('  "includeEndsWith": ' + JSON.stringify(includeEndsWith));
-  verboseLog('  "excludePathContains": ' + JSON.stringify(excludePathContains));
-  verboseLog('  "excludePathEndsWith": ' + JSON.stringify(excludePathEndsWith));
-  verboseLog('  "excludePathStartsWith": ' + JSON.stringify(excludePathStartsWith));
-  verboseLog('  "folder": ' + folder);
-  verboseLog('  "style:' + JSON.stringify(style))
+  verboseLog("Resolved Config:");
+  verboseLog(JSON.stringify(config));
 }
 
 function queryNoOpenFiles() {
-  const opened = execSync('git status -s').toString();
+  const opened = execSync("git status -s").toString();
   if (opened) {
-    console.error('The following files have incorrect formatting or not committed:');
+    console.error(
+      "The following files have incorrect formatting or not committed:"
+    );
     console.error(opened);
     process.exit(2);
   }
@@ -153,8 +179,8 @@ function errorFromExitCode(exitCode: number) {
 }
 
 function git(args: string[], options: SpawnSyncOptions) {
-  verboseLog("git: " + JSON.stringify(args) + "  " + JSON.stringify(options))
-  const results = spawnSync('git', args, options);
+  verboseLog("git: " + JSON.stringify(args) + "  " + JSON.stringify(options));
+  const results = spawnSync("git", args, options);
 
   if (results.status === 0) {
     return {
@@ -172,12 +198,12 @@ function git(args: string[], options: SpawnSyncOptions) {
 }
 
 function listAllTrackedFiles(cwd: string) {
-  const results = git(['ls-tree', '-r', '--name-only', '--full-tree', 'HEAD'], {
+  const results = git(["ls-tree", "-r", "--name-only", "--full-tree", "HEAD"], {
     cwd,
   });
 
   if (results.success) {
-    return results.stdout.split('\n');
+    return results.stdout.split("\n");
   }
 
   return [];
@@ -189,7 +215,7 @@ function listAllTrackedFiles(cwd: string) {
 function spawnClangFormat(
   args: string[],
   done: (Error?: any) => void,
-  stdio: StdioOptions,
+  stdio: StdioOptions
 ) {
   // WARNING: This function's interface should stay stable across versions for the cross-version
   // loading below to work.
@@ -203,15 +229,15 @@ function spawnClangFormat(
     return;
   }
 
-  let files = listAllTrackedFiles(folder);
+  let files = listAllTrackedFiles(config.gitRoot);
 
   // Apply file filters from constants
   files = files.filter(
     (file) =>
-      includeEndsWith.some((_) => file.endsWith(_)) &&
-      !excludePathContains.some((_) => file.indexOf(_) >= 0) &&
-      !excludePathEndsWith.some((_) => file.endsWith(_)) &&
-      !excludePathStartsWith.some((_) => file.startsWith(_)) ,
+      config.includeEndsWith.some((_) => file.endsWith(_)) &&
+      !config.excludePathContains.some((_) => file.indexOf(_) >= 0) &&
+      !config.excludePathEndsWith.some((_) => file.endsWith(_)) &&
+      !config.excludePathStartsWith.some((_) => file.startsWith(_))
   );
 
   // split file array into chunks of 30
@@ -229,10 +255,10 @@ function spawnClangFormat(
     chunks.map((chunk) => {
       return function (callback) {
         const clangFormatProcess = spawn(nativeBinary, args.concat(chunk), {
-          cwd: folder,
+          cwd: config.gitRoot,
           stdio: stdio,
         });
-        clangFormatProcess.on('close', (exit) => {
+        clangFormatProcess.on("close", (exit) => {
           if (exit !== 0) {
             callback(errorFromExitCode(exit!));
           } else {
@@ -246,13 +272,14 @@ function spawnClangFormat(
         done(err);
         return;
       }
-      console.log('\n');
+      console.log("\n");
       console.log(
-        `ran clang-format on ${files.length} ${files.length === 1 ? 'file' : 'files'
-        }`,
+        `ran clang-format on ${files.length} ${
+          files.length === 1 ? "file" : "files"
+        }`
       );
       done();
-    },
+    }
   );
 }
 
@@ -262,7 +289,7 @@ function spawnClangFormat(
 function spawnClangFormatRaw(
   args: string[],
   done: (any?: Error) => void,
-  stdio: StdioOptions,
+  stdio: StdioOptions
 ) {
   // WARNING: This function's interface should stay stable across versions for the cross-version
   // loading below to work.
@@ -278,24 +305,24 @@ function spawnClangFormatRaw(
 
   verboseLog("clang-format " + JSON.stringify(args));
   const clangFormatProcess = spawn(nativeBinary, args, {
-    cwd: folder,
+    cwd: config.gitRoot,
     stdio: stdio,
   });
-  clangFormatProcess.on('close', (exit) => {
+  clangFormatProcess.on("close", (exit) => {
     if (exit !== 0) {
       done(errorFromExitCode(exit!));
     } else {
       done();
     }
-  }
-  );
+  });
 }
 
 function printHelp() {
   console.log(
     `
 clang-format-launcher is a clang-format wrapper.
-It uses 'git ls-tree' to speed up the file lookup, then filters the files by the rule which is defined in clang.format.json.
+It uses 'git ls-tree' to speed up the file lookup and reduce the noise, then filters the files by the rule which is defined in clang.format.json or package.json.
+It looks cwd/package.json, cwd/clang.format.json and finally fallback to node_modules/clang-format-launcher/clang.format.json.
 Usage:
   npx clang-format-launcher [options] [other options]
     Options:
@@ -321,12 +348,24 @@ clang.format.json example:
   "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
   "excludePathEndsWith": [".g.h",".g.cpp"],  
   "excludePathStartsWith": [],
-  "folder": "../..",
+  "gitRoot": "../..",
   "style": "--style=file"
 }
-    
+
+package.json example:
+{
+  "clang-format-launcher": {
+    "includeEndsWith": [".h",".cpp"],
+    "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
+    "excludePathEndsWith": [".g.h",".g.cpp"],  
+    "excludePathStartsWith": [],
+    "gitRoot": ".",
+    "style": "--style=file"
+  }
+}
+
 `
-  )
+  );
 }
 
 main();

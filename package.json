@@ -1,21 +1,22 @@
 {
   "name": "clang-format-launcher",
-  "version": "0.1.1",
-	"description": "clang-format launcher with simple configuration",
-	"author": "Canhua Li",
-	"license": "MIT",
-	"homepage": "https://licanhua.github.io",
+  "version": "0.1.2",
+  "description": "clang-format launcher with simple configuration",
+  "author": "Canhua Li",
+  "license": "MIT",
+  "homepage": "https://licanhua.github.io",
   "repository": {
     "type": "git",
     "url": "https://github.com/licanhua/clang-format-launcher"
   },
-	"keywords": [
-		"clang-format",
-		"launcher"
-	],
+  "keywords": [
+    "clang-format",
+    "launcher"
+  ],
   "main": "dist/index.js",
   "scripts": {
-    "prepublishOnly": "tsc"
+    "prepublishOnly": "tsc",
+    "prettier": "prettier --write ."
   },
   "peerDependencies": {
     "clang-format": "^1.5.0"
@@ -31,8 +32,7 @@
     "@types/node": "^16.11.11",
     "async": "^3.2.2",
     "clang-format": "1.5.0",
+    "prettier": "2.5.1",
     "typescript": "^4.5.2"
-  },
-  "dependencies": {
   }
 }

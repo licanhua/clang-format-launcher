@@ -19,9 +19,8 @@ const config: Config = {
   excludePathContains: [],
   excludePathEndsWith: [],
   excludePathStartsWith: [],
-  gitRoot: process.cwd(),
   style: "--style=file",
-  clangFormatBinPath: ""
+  clangFormatBinPath: "",
 };
 
 const resolveClangFormat = () => {
@@ -31,7 +30,7 @@ const resolveClangFormat = () => {
     return lib.getNativeBinary();
   }
   return config.clangFormatBinPath;
-}
+};
 
 let verbose = false;
 
@@ -48,10 +47,23 @@ interface Config {
   excludePathContains?: string[];
   excludePathEndsWith?: string[];
   excludePathStartsWith?: string[];
-  gitRoot?: string;
   style?: string;
   clangFormatBinPath?: string;
 }
+
+const resolveGitRoot = () => {
+  const result = git(["rev-parse", "--show-toplevel"], {
+    cwd: process.cwd(),
+  });
+  if (result.success) {
+    return result.stdout;
+  } else {
+    console.warn("Can't get gitroot: " + result.stderr);
+    process.exit(1);
+  }
+};
+
+let gitRoot: string = undefined;
 
 const hasPackageJsonLauncherKey = (packagePath: string) => {
   const content = fs.readFileSync(packagePath, "utf8");
@@ -96,6 +108,8 @@ function main() {
     .filter((_) => _ !== VERIFY_FLAG && _ !== RAW_FLAG);
 
   if (!useRaw) {
+    gitRoot = resolveGitRoot();
+    console.log("gitRoot: " + gitRoot);
     loadConfig();
 
     if (verify) {
@@ -156,13 +170,9 @@ function loadConfig() {
       conf.excludePathEndsWith ?? config.excludePathEndsWith;
     config.excludePathStartsWith =
       conf.excludePathStartsWith ?? config.excludePathStartsWith;
-    config.gitRoot = conf.gitRoot ?? config.gitRoot;
     config.style = conf.style ?? config.style;
-    config.clangFormatBinPath = conf.clangFormatBinPath ?? config.clangFormatBinPath;
-
-    if (!path.isAbsolute(config.gitRoot)) {
-      config.gitRoot = path.resolve(cwd, config.gitRoot);
-    }
+    config.clangFormatBinPath =
+      conf.clangFormatBinPath ?? config.clangFormatBinPath;
   } catch (e) {
     console.log("Fail to parse conf file");
     console.log((e as Error).message);
@@ -239,7 +249,7 @@ function spawnClangFormat(
     return;
   }
 
-  let files = listAllTrackedFiles(config.gitRoot);
+  let files = listAllTrackedFiles(gitRoot);
 
   // Apply file filters from constants
   files = files.filter(
@@ -265,7 +275,7 @@ function spawnClangFormat(
     chunks.map((chunk) => {
       return function (callback) {
         const clangFormatProcess = spawn(nativeBinary, args.concat(chunk), {
-          cwd: config.gitRoot,
+          cwd: gitRoot,
           stdio: stdio,
         });
         clangFormatProcess.on("close", (exit) => {
@@ -315,7 +325,7 @@ function spawnClangFormatRaw(
 
   verboseLog("clang-format " + JSON.stringify(args));
   const clangFormatProcess = spawn(nativeBinary, args, {
-    cwd: config.gitRoot,
+    cwd: gitRoot,
     stdio: stdio,
   });
   clangFormatProcess.on("close", (exit) => {
@@ -358,7 +368,6 @@ clang.format.json example:
   "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
   "excludePathEndsWith": [".g.h",".g.cpp"],  
   "excludePathStartsWith": [],
-  "gitRoot": "../..",
   "style": "--style=file",
   "clangFormatBinPath": "clang-format"
 }
@@ -370,7 +379,6 @@ package.json example:
     "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
     "excludePathEndsWith": [".g.h",".g.cpp"],  
     "excludePathStartsWith": [],
-    "gitRoot": ".",
     "style": "--style=file",
     "clangFormatBinPath": ""
   }

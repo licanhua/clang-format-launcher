@@ -4,7 +4,6 @@
     "excludePathContains": [],
     "excludePathEndsWith": [".g.h", ".g.cpp"],
     "excludePathStartsWith": [],
-    "gitRoot": ".",
     "style": "--style=file",
     "clangFormatBinPath": ""
   }

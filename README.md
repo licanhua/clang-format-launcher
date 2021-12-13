@@ -20,19 +20,25 @@ Here is the idea:
 ## Step 1
 
 - use clang-format npmjs binary:
+
 ```
 npm i --save-dev clang-format clang-format-launcher
 ```
 
 - use your own clang-format binary:
+
 ```
 npm i --save-dev clang-format-launcher
 ```
+
 then in your config, set clangFormatBinPath
+
 ```
 "clangFormatBinPath" : "clang-format"
 ```
+
 or
+
 ```
 "clangFormatBinPath" : "${fullpath}/clang-format"
 ```
@@ -40,9 +46,6 @@ or
 ## Step 2 prepare clang.format.json or package.json
 
 put clang.format.json or package.json in the `current` folder.
-If your git repo root is not the same as `current` folder, please set the gitRoot.
-gitRoot can be relate path to current folder, or absolute path.
-clang-format is running under gitRoot folder.
 
 clang.format.json example:
 
@@ -52,7 +55,6 @@ clang.format.json example:
   "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
   "excludePathEndsWith": [".g.h",".g.cpp"],
   "excludePathStartsWith": [],
-  "gitRoot": "../../",
   "style": "--style=file"
 }
 ```
@@ -66,17 +68,9 @@ package.json example:
     "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
     "excludePathEndsWith": [".g.h",".g.cpp"],
     "excludePathStartsWith": [],
-    "gitRoot": ".",
     "style": "--style=file"
   }
 }
-```
-
-If may hit `no such file or directory` if gitRoot is not set correctly.
-For example:
-```
-Formatting source/shared/cpp/AdaptiveCardsSharedModel/AdaptiveCardsSharedModelUnitTest/ParserRegistrationTest.cpp
-no such file or directory
 ```
 
 # Usage
@@ -134,7 +128,6 @@ clang.format.json example:
   "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
   "excludePathEndsWith": [".g.h",".g.cpp"],
   "excludePathStartsWith": [],
-  "gitRoot": "../..",
   "style": "--style=file",
   "clangFormatBinPath": ""
 }
@@ -146,7 +139,6 @@ package.json example:
     "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
     "excludePathEndsWith": [".g.h",".g.cpp"],
     "excludePathStartsWith": [],
-    "gitRoot": ".",
     "style": "--style=file",
     "clangFormatBinPath": "clang-format"
   }

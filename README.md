@@ -19,8 +19,22 @@ Here is the idea:
 
 ## Step 1
 
+- use clang-format npmjs binary:
 ```
 npm i --save-dev clang-format clang-format-launcher
+```
+
+- use your own clang-format binary:
+```
+npm i --save-dev clang-format-launcher
+```
+then in your config, set clangFormatBinPath
+```
+"clangFormatBinPath" : "clang-format"
+```
+or
+```
+"clangFormatBinPath" : "${fullpath}/clang-format"
 ```
 
 ## Step 2 prepare clang.format.json or package.json
@@ -121,7 +135,8 @@ clang.format.json example:
   "excludePathEndsWith": [".g.h",".g.cpp"],
   "excludePathStartsWith": [],
   "gitRoot": "../..",
-  "style": "--style=file"
+  "style": "--style=file",
+  "clangFormatBinPath": ""
 }
 
 package.json example:
@@ -132,7 +147,8 @@ package.json example:
     "excludePathEndsWith": [".g.h",".g.cpp"],
     "excludePathStartsWith": [],
     "gitRoot": ".",
-    "style": "--style=file"
+    "style": "--style=file",
+    "clangFormatBinPath": "clang-format"
   }
 }
 

@@ -1,10 +1,11 @@
 {
   "clang-format-launcher": {
     "includeEndsWith": [".h", ".cpp"],
-    "excludePathContains": ["/ios/", "/nodejs/", "/android/"],
+    "excludePathContains": [],
     "excludePathEndsWith": [".g.h", ".g.cpp"],
     "excludePathStartsWith": [],
     "gitRoot": ".",
-    "style": "--style=file"
+    "style": "--style=file",
+    "clangFormatBinPath": ""
   }
 }

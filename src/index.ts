@@ -14,9 +14,6 @@ import {
   spawnSync,
 } from "child_process";
 
-// @ts-ignore (no typings for clang-format)
-import { getNativeBinary } from "clang-format";
-
 const config: Config = {
   includeEndsWith: [],
   excludePathContains: [],
@@ -24,7 +21,17 @@ const config: Config = {
   excludePathStartsWith: [],
   gitRoot: process.cwd(),
   style: "--style=file",
+  clangFormatBinPath: ""
 };
+
+const resolveClangFormat = () => {
+  if (!config.clangFormatBinPath || config.clangFormatBinPath.length === 0) {
+    // @ts-ignore (no typings for clang-format)
+    const lib = require("clang-format");
+    return lib.getNativeBinary();
+  }
+  return config.clangFormatBinPath;
+}
 
 let verbose = false;
 
@@ -43,6 +50,7 @@ interface Config {
   excludePathStartsWith?: string[];
   gitRoot?: string;
   style?: string;
+  clangFormatBinPath?: string;
 }
 
 const hasPackageJsonLauncherKey = (packagePath: string) => {
@@ -150,6 +158,8 @@ function loadConfig() {
       conf.excludePathStartsWith ?? config.excludePathStartsWith;
     config.gitRoot = conf.gitRoot ?? config.gitRoot;
     config.style = conf.style ?? config.style;
+    config.clangFormatBinPath = conf.clangFormatBinPath ?? config.clangFormatBinPath;
+
     if (!path.isAbsolute(config.gitRoot)) {
       config.gitRoot = path.resolve(cwd, config.gitRoot);
     }
@@ -222,7 +232,7 @@ function spawnClangFormat(
   let nativeBinary: string;
 
   try {
-    nativeBinary = getNativeBinary();
+    nativeBinary = resolveClangFormat();
     verboseLog("native Clang-format: " + nativeBinary);
   } catch (e) {
     setImmediate(done.bind(e));
@@ -296,7 +306,7 @@ function spawnClangFormatRaw(
   let nativeBinary: string;
 
   try {
-    nativeBinary = getNativeBinary();
+    nativeBinary = resolveClangFormat();
     verboseLog("native Clang-format: " + nativeBinary);
   } catch (e) {
     setImmediate(done.bind(e));
@@ -349,7 +359,8 @@ clang.format.json example:
   "excludePathEndsWith": [".g.h",".g.cpp"],  
   "excludePathStartsWith": [],
   "gitRoot": "../..",
-  "style": "--style=file"
+  "style": "--style=file",
+  "clangFormatBinPath": "clang-format"
 }
 
 package.json example:
@@ -360,7 +371,8 @@ package.json example:
     "excludePathEndsWith": [".g.h",".g.cpp"],  
     "excludePathStartsWith": [],
     "gitRoot": ".",
-    "style": "--style=file"
+    "style": "--style=file",
+    "clangFormatBinPath": ""
   }
 }
 

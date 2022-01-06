@@ -5,6 +5,7 @@
     "excludePathEndsWith": [".g.h", ".g.cpp"],
     "excludePathStartsWith": [],
     "style": "--style=file",
-    "clangFormatBinPath": ""
+    "clangFormatBinPath": "",
+    "doGitStatusCheck": false
   }
 }

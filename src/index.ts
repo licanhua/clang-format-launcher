@@ -21,6 +21,7 @@ const config: Config = {
   excludePathStartsWith: [],
   style: "--style=file",
   clangFormatBinPath: "",
+  doGitStatusCheck: false,
 };
 
 const resolveClangFormat = () => {
@@ -49,6 +50,7 @@ interface Config {
   excludePathStartsWith?: string[];
   style?: string;
   clangFormatBinPath?: string;
+  doGitStatusCheck?: boolean;
 }
 
 const resolveGitRoot = () => {
@@ -138,7 +140,11 @@ function main() {
     if (useRaw) {
       spawnClangFormatRaw(args, handleDone(false), "inherit");
     } else {
-      spawnClangFormat(args, handleDone(verify), "inherit");
+      spawnClangFormat(
+        args,
+        handleDone(verify && config.doGitStatusCheck),
+        "inherit"
+      );
     }
   } catch (e) {
     process.stdout.write((e as Error).message);
@@ -173,6 +179,7 @@ function loadConfig() {
     config.style = conf.style ?? config.style;
     config.clangFormatBinPath =
       conf.clangFormatBinPath ?? config.clangFormatBinPath;
+    config.doGitStatusCheck = conf.doGitStatusCheck ?? config.doGitStatusCheck;
   } catch (e) {
     console.log("Fail to parse conf file");
     console.log((e as Error).message);
@@ -369,7 +376,8 @@ clang.format.json example:
   "excludePathEndsWith": [".g.h",".g.cpp"],  
   "excludePathStartsWith": [],
   "style": "--style=file",
-  "clangFormatBinPath": "clang-format"
+  "clangFormatBinPath": "clang-format",
+  "doGitStatusCheck": true
 }
 
 package.json example:
